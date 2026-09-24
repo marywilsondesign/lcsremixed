@@ -5,22 +5,26 @@ const aboutBtn = document.getElementById("aboutBtn");
 const closeBtn = document.getElementById("closeColophon");
 const pill = document.getElementById("closeCursor");
 
-const SPEED = 40;         // px per second
-const CHUNK_LINES = 20;   // source lines per chunk
-const BUFFER = 1.5;       // screens of text kept rendered above and below the view
+const SPEED = 40;     // px per second
 const FONT_PX = 16;
-const LINE_PX = 24;
+const ROW_PX = 24;
+const ROWS = 30;      // rows per chunk
+const BUFFER = 1.5;   // screens rendered above and below the view
 
 let banned = new Set();
-let chunks = [];          // { el, lines, chars, h, on }
-let tops = [];            // top offset of each chunk, plus the end of the last
-let colChars = 80;        // monospace characters per row
+let str = "";         // the whole text as one line
+let chunks = [];
+let active = new Set();
+let colChars = 80;    // characters per row (monospace)
+let nRows = 0;
 let padTop = 0, padBottom = 0;
-let pos = 0;              // our own float scroll position
+let pos = 0;
 let running = false, loaded = false;
 let lastFrame = 0, lastUpdate = 0, rafId = null;
 
 const ENT = { "&": "&amp;", "<": "&lt;", ">": "&gt;" };
+const esc = (t) => t.replace(/[&<>]/g, (c) => ENT[c]);
+const isW = (ch) => ch !== undefined && /\w/.test(ch);
 
 async function fetchText(url, ms = 20000) {
   const res = await Promise.race([
@@ -31,26 +35,9 @@ async function fetchText(url, ms = 20000) {
   return res.text();
 }
 
-// Deterministic hue per word, so a word always looks the same.
 function hueFor(n) {
   const x = Math.sin(n * 12.9898) * 43758.5453;
   return Math.floor((x - Math.floor(x)) * 360);
-}
-
-// Only the chunks near the view are ever turned into HTML.
-function render(ci) {
-  const c = chunks[ci];
-  let n = 0;
-  return c.lines
-    .join("\n")
-    .replace(/(\w+)|[&<>]/g, (m, w) => {
-      if (!w) return ENT[m];
-      const clean = w.replace(/[^a-zA-Z]/g, "").toLowerCase();
-      if (clean && banned.has(clean)) {
-        return '<span class="blur" style="--h:' + hueFor(ci * 1000 + n++) + '">' + w + "</span>";
-      }
-      return w;
-    });
 }
 
 function measure() {
@@ -65,74 +52,90 @@ function measure() {
   contentEl.appendChild(probe);
   const charW = probe.getBoundingClientRect().width / 100 || FONT_PX * 0.5;
   probe.remove();
+
   colChars = Math.max(20, Math.floor(usable / charW));
+  nRows = Math.ceil(str.length / colChars);
 }
 
-function estimate(c) {
-  // Monospace type makes row counts predictable; 4% covers word-wrap slack.
-  return Math.ceil((c.chars * 1.04) / colChars + c.lines.length * 0.5) * LINE_PX;
-}
-
-function retop(from = 0) {
-  tops[0] = padTop;
-  for (let i = from; i < chunks.length; i++) tops[i + 1] = tops[i] + chunks[i].h;
-}
-
-function populate(i) {
-  const c = chunks[i];
-  if (c.on) return;
-  c.el.style.height = "auto";
-  c.el.innerHTML = render(i);
-  c.on = true;
-  const h = c.el.offsetHeight;
-  if (h !== c.h) {
-    if (tops[i] + c.h <= pos) pos += h - c.h; // chunk above the view: keep the view still
-    c.h = h;
-    retop(i);
+function buildChunks() {
+  const frag = document.createDocumentFragment();
+  const n = Math.ceil(nRows / ROWS);
+  chunks = [];
+  active.clear();
+  for (let i = 0; i < n; i++) {
+    const el = document.createElement("div");
+    el.style.height = Math.min(ROWS, nRows - i * ROWS) * ROW_PX + "px";
+    frag.appendChild(el);
+    chunks.push(el);
   }
+  contentEl.replaceChildren(frag);
 }
 
-function unpopulate(i) {
-  const c = chunks[i];
-  if (!c.on) return;
-  c.h = c.el.offsetHeight;
-  c.el.textContent = "";
-  c.el.style.height = c.h + "px";
-  c.on = false;
+// Every row holds exactly colChars characters. Banned words are found on the
+// whole word (even if a row break falls inside it) and blurred on both rows.
+function render(ci) {
+  const a = ci * ROWS * colChars;
+  const b = Math.min(str.length, a + ROWS * colChars);
+  let ea = a, eb = b;
+  while (ea > 0 && isW(str[ea - 1])) ea--;
+  while (eb < str.length && isW(str[eb])) eb++;
+
+  const ranges = [];
+  const slice = str.slice(ea, eb);
+  const re = /\w+/g;
+  let m;
+  while ((m = re.exec(slice))) {
+    const clean = m[0].replace(/[^a-zA-Z]/g, "").toLowerCase();
+    if (clean && banned.has(clean)) ranges.push([ea + m.index, ea + m.index + m[0].length]);
+  }
+
+  let html = "";
+  let j = 0;
+  for (let rs = a; rs < b; rs += colChars) {
+    const rend = Math.min(b, rs + colChars);
+    while (j < ranges.length && ranges[j][1] <= rs) j++;
+    let p = rs, k = j, row = "";
+    while (k < ranges.length && ranges[k][0] < rend) {
+      const [s, e] = ranges[k];
+      const s2 = Math.max(s, rs), e2 = Math.min(e, rend);
+      row += esc(str.slice(p, s2)) +
+        '<span class="blur" style="--h:' + hueFor(s) + '">' + esc(str.slice(s2, e2)) + "</span>";
+      p = e2;
+      if (e <= rend) k++; else break;
+    }
+    row += esc(str.slice(p, rend));
+    html += '<div class="row">' + row + "</div>";
+    j = k;
+  }
+  return html;
 }
 
 function update() {
   const vh = viewportEl.clientHeight;
-  const lo = pos - vh * BUFFER;
-  const hi = pos + vh * (1 + BUFFER);
-  for (let i = 0; i < chunks.length; i++) {
-    const top = tops[i];
-    if (top + chunks[i].h > lo && top < hi) populate(i);
-    else unpopulate(i);
+  const chunkH = ROWS * ROW_PX;
+  const lo = Math.max(0, Math.floor((pos - vh * BUFFER - padTop) / chunkH));
+  const hi = Math.min(chunks.length - 1, Math.floor((pos + vh * (1 + BUFFER) - padTop) / chunkH));
+  for (const i of [...active]) {
+    if (i < lo || i > hi) { chunks[i].textContent = ""; active.delete(i); }
+  }
+  for (let i = lo; i <= hi; i++) {
+    if (!active.has(i)) { chunks[i].innerHTML = render(i); active.add(i); }
   }
 }
 
 function layout() {
+  const keep = loaded ? (Math.max(0, pos - padTop) / ROW_PX) * colChars : null; // characters scrolled past
   measure();
-  chunks.forEach((c) => {
-    c.on = false;
-    c.el.textContent = "";
-    c.h = estimate(c);
-    c.el.style.height = c.h + "px";
-  });
-  retop();
+  buildChunks();
+  pos = keep === null ? 0 : padTop + (keep / colChars) * ROW_PX;
   update();
-}
-
-function totalHeight() {
-  return tops[chunks.length] + padBottom;
 }
 
 function tick(now) {
   const dt = Math.min((now - lastFrame) / 1000, 0.1);
   lastFrame = now;
   pos += SPEED * dt;
-  if (pos >= totalHeight() - viewportEl.clientHeight) pos = 0;
+  if (pos >= padTop + nRows * ROW_PX + padBottom - viewportEl.clientHeight) pos = 0;
   if (now - lastUpdate > 250) { update(); lastUpdate = now; }
   viewportEl.scrollTop = pos;
   rafId = requestAnimationFrame(tick);
@@ -152,20 +155,10 @@ async function init() {
       fetchText("./bannedWords.txt"),
     ]);
     banned = new Set(bannedRaw.split("\n").map((w) => w.trim().toLowerCase()).filter(Boolean));
-
-    const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
-    const frag = document.createDocumentFragment();
-    for (let i = 0; i < lines.length; i += CHUNK_LINES) {
-      const part = lines.slice(i, i + CHUNK_LINES);
-      const el = document.createElement("div");
-      el.className = "chunk";
-      frag.appendChild(el);
-      chunks.push({ el, lines: part, chars: part.reduce((n, l) => n + l.length + 1, 0), h: 0, on: false });
-    }
+    str = text.replace(/\s+/g, " ").trim();
 
     try { await document.fonts.load(FONT_PX + "px Inconsolata"); } catch (e) {}
 
-    contentEl.replaceChildren(frag);
     layout();
     loaded = true;
     start();
