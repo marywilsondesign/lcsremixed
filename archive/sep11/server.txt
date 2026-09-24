@@ -1,0 +1,10 @@
+Last login: Tue Nov 11 08:55:37 on ttys001
+(base) marywilson@alls-MacBook-Pro ~ % cd ~/Desktop/whitney
+
+(base) marywilson@alls-MacBook-Pro whitney % ls
+__pycache__	scraper.py	scraper0.py	sentences
+(base) marywilson@alls-MacBook-Pro whitney % cd ~/Desktop/longest_sentence
+
+(base) marywilson@alls-MacBook-Pro longest_sentence % ls
+full.txt		whitney_scroller.html
+(base) marywilson@alls-MacBook-Pro longest_sentence % python3 -m http.server

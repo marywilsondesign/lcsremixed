@@ -1,1 +1,116 @@
-#aboutBtn,#closeColophon,body,html{font-family:"Times New Roman",Times,serif;font-weight:100}#colophon,body,html{height:100%;background:#121212;color:#f7f7f7}#colophonContent h3,.colophon-entry .label{text-transform:uppercase;letter-spacing:.05em;color:#888}.blur,.zalgo{will-change:filter}body,html{margin:0;overflow:hidden;text-align:justify}#viewport{position:fixed;inset:0;overflow:hidden}#content{position:absolute;top:0;left:0;right:0;white-space:normal;padding:40px;line-height:1.45;font-size:14px}a,a:active,a:visited{color:#fff;text-decoration:underline}a:hover{color:#e2e2e2;opacity:.8}#aboutBtn,#closeColophon{border:none;font-size:12px;color:#121212;background-color:#f7f7f7;padding:8px 14px;position:fixed;top:16px;right:40px;z-index:10;cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Ccircle cx='6' cy='6' r='5' fill='%232c00ef'/%3E%3C/svg%3E") 6 6,pointer!important}#aboutBtn.active,#aboutBtn:hover,#closeColophon.active,#closeColophon:hover,#obscureControls button.active,#obscureControls button:hover{text-decoration:line-through;font-style:italic}#closeColophon{display:none}#colophon.open~#closeColophon{display:block}#colophon{position:fixed;top:0;right:-400px;width:400px;transition:right .4s;z-index:20;overflow-y:auto}#colophon.open{right:0}#colophonContent{padding:80px 32px 32px;font-size:14px;text-align:left;line-height:1.6}#colophonContent h2{font-size:16px;font-weight:100;text-decoration:underline;margin-bottom:32px;text-align:center}#colophonContent h3,#obscureControls,#obscureControls button{font-weight:100;font-size:12px}.colophon-entry{margin-bottom:16px;display:flex;flex-direction:column;gap:4px}.colophon-entry .label{font-weight:600;font-size:11px}.colophon-entry .value{font-weight:300;color:#f7f7f7}#colophonContent h3{text-decoration:none;margin-top:24px;margin-bottom:8px}#colophonContent p{margin-bottom:12px;line-height:1.6;color:#f7f7f7}#colophonContent a{color:#888;text-decoration:underline;cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Ccircle cx='6' cy='6' r='5' fill='%232c00ef'/%3E%3C/svg%3E") 6 6,pointer!important}#colophonContent a:hover{color:#fff}#obscureControls{position:fixed;bottom:0;left:0;width:100%;background-color:#f7f7f7;text-align:center;padding:10px 0}#obscureControls button{background:0 0;border:none;font-family:"Times New Roman",Times,serif;color:#2c00ef;margin:0 6px;cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Ccircle cx='6' cy='6' r='5' fill='%232c00ef'/%3E%3C/svg%3E") 6 6,pointer!important}#obscureControls span.separator{margin:0 6px;color:#121212}*{cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Ccircle cx='6' cy='6' r='5' fill='%232c00ef'/%3E%3C/svg%3E") 6 6,pointer!important}.blur{filter:blur(4px)}.dots{letter-spacing:.08em;font-size:110%}.zalgo{font-size:115%;letter-spacing:.04em;line-height:.85;text-decoration:line-through;text-decoration-thickness:10px;text-decoration-color:#121212}.blocked{font-weight:700;text-decoration:line-through}@media (max-width:768px){.blur{filter:blur(2px)}}
+:root {
+  --paper: #fff;
+  --ink: #000;
+  --font: "Inconsolata", ui-monospace, Menlo, Consolas, monospace;
+
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font);
+  font-weight: 400;
+}
+
+#viewport { position: fixed; inset: 0; overflow: hidden; }
+
+#content {
+  padding: 40px;
+  font-size: 16px;
+  line-height: 24px;
+  text-align: justify;
+}
+
+/* The text is rendered in chunks; the last row of each is justified so the seams do not show. */
+.chunk { text-align-last: justify; overflow: hidden; }
+
+/* Blurred words. Two soft coloured shadows (a per-word hue and its neighbour)
+   read as a small gradient. Cheap to paint: no filters, no compositing layers. */
+.blur {
+  color: transparent;
+  text-shadow:
+    -2px 0 6px hsl(var(--h) 95% 55%),
+     2px 0 6px hsl(calc(var(--h) + 70) 95% 55%);
+  user-select: none;
+}
+
+a, a:visited { color: var(--ink); text-decoration: underline; }
+a:hover { opacity: .6; }
+
+#aboutBtn, #closeColophon {
+  position: fixed;
+  top: 16px;
+  right: 40px;
+  z-index: 10;
+  padding: 5px 14px;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.2;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--paper);
+  background: var(--ink);
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+}
+#aboutBtn:hover, #closeColophon:hover { background:#fff;color: #000;border: #000 1px solid; }
+#aboutBtn:focus-visible, #closeColophon:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+#closeColophon { display: none; z-index: 30; }
+#colophon.open ~ #closeColophon { display: block; }
+
+#colophon {
+  position: fixed;
+  top: 0; right: -400px;
+  width: 400px; max-width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  z-index: 20;
+  background: var(--paper);
+  border-left: 1px solid var(--ink);
+  transition: right .4s;
+}
+#colophon.open { right: 0; }
+
+#colophonContent { padding: 80px 32px 32px; font-size: 15px; line-height: 1.6; text-align: left; }
+#colophonContent h2 { margin: 0 0 32px; font-size: 18px; font-weight: 600; }
+#colophonContent h3 { margin: 24px 0 6px; font-size: 14px; font-weight: 600; }
+#colophonContent p { margin: 0 0 12px; }
+
+/* Pill cursor: shown only while the colophon is open and the pointer is outside it */
+#closeCursor {
+  position: fixed;
+  top: 0; left: 0;
+  z-index: 40;
+  padding: 5px 14px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 12px;
+  line-height: 1.2;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .15s;
+}
+body.cursor-close #closeCursor { opacity: 1; }
+body.cursor-close, body.cursor-close * { cursor: none; }
+
+@media (hover: none) {
+  #closeCursor { display: none; }
+}
+
+@media (max-width: 768px) {
+  #content { padding: 24px; }
+  #aboutBtn, #closeColophon { right: 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #colophon { transition: none; }
+}
