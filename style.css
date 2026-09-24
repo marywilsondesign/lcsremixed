@@ -63,9 +63,8 @@ a:hover { opacity: .6; }
   background: var(--ink);
   border: 0;
   border-radius: 999px;
-  cursor: pointer;
 }
-#aboutBtn:hover, #closeColophon:hover { background-color: var(--paper);outline: var(--ink) 1px solid; color: var(--ink); }
+#aboutBtn:hover, #closeColophon:hover {background: var(--paper);outline: var(--ink) 1px solid; color: var(--ink) }
 #aboutBtn:focus-visible, #closeColophon:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
 #closeColophon { display: none; z-index: 30; }
 #colophon.open ~ #closeColophon { display: block; }
@@ -107,6 +106,20 @@ a:hover { opacity: .6; }
 }
 body.cursor-close #closeCursor { opacity: 1; }
 body.cursor-close, body.cursor-close * { cursor: none; }
+
+/* Gradient blob cursor, drawn on one canvas by script.js */
+#blob {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 50;
+  pointer-events: none;
+  transition: opacity .15s;
+}
+body.cursor-close #blob, body.cursor-out #blob { opacity: 0; }
+@media (hover: hover) { * { cursor: none; } }
+@media (hover: none) { #blob { display: none; } }
 
 @media (hover: none) {
   #closeCursor { display: none; }

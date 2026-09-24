@@ -216,4 +216,67 @@ document.addEventListener("visibilitychange", () => {
 viewportEl.addEventListener("touchstart", (e) => e.preventDefault());
 viewportEl.addEventListener("touchmove", (e) => e.preventDefault());
 
+// ---- Gradient blob cursor ----
+// A chain of soft dots: the head chases the mouse and each dot chases the one ahead.
+// Moving spreads them into a tail; standing still lets them settle back into one blob.
+const blob = document.getElementById("blob");
+const bctx = blob.getContext("2d");
+const fineCursor = matchMedia("(hover: hover) and (pointer: fine)").matches;
+const TAIL = 8;
+const FOLLOW = .8;
+let trail = [];
+let mx = 0, my = 0, blobRaf = null;
+
+function sizeBlob() {
+  const d = window.devicePixelRatio || 1;
+  blob.width = innerWidth * d;
+  blob.height = innerHeight * d;
+  bctx.setTransform(d, 0, 0, d, 0, 0);
+}
+
+function drawBlob() {
+  bctx.clearRect(0, 0, innerWidth, innerHeight);
+  let moving = false;
+  let lead = { x: mx, y: my };
+  for (const p of trail) {
+    const dx = lead.x - p.x, dy = lead.y - p.y;
+    p.x += dx * FOLLOW;
+    p.y += dy * FOLLOW;
+    if (Math.abs(dx) + Math.abs(dy) > 0.3) moving = true;
+    lead = p;
+  }
+  for (let i = TAIL - 1; i >= 0; i--) {
+    const p = trail[i];
+    const r = 20 * (1 - 0.75 * (i / TAIL));
+    const h = (p.x * 0.12 + p.y * 0.12 + i * 5) % 360; // hue follows screen position, like the words
+    const g = bctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
+    g.addColorStop(0, "hsla(" + h + ",95%,55%,.45)");
+    g.addColorStop(1, "hsla(" + (h + 70) + ",95%,55%,0)");
+    bctx.fillStyle = g;
+    bctx.beginPath();
+    bctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+    bctx.fill();
+  }
+  return moving;
+}
+
+function blobFrame() {
+  blobRaf = drawBlob() ? requestAnimationFrame(blobFrame) : null;
+}
+
+if (fineCursor) {
+  sizeBlob();
+  window.addEventListener("resize", sizeBlob);
+  document.addEventListener("mousemove", (e) => {
+    mx = e.clientX;
+    my = e.clientY;
+    document.body.classList.remove("cursor-out");
+    if (!trail.length) trail = Array.from({ length: TAIL }, () => ({ x: mx, y: my }));
+    if (!blobRaf) blobRaf = requestAnimationFrame(blobFrame);
+  });
+  document.documentElement.addEventListener("mouseleave", () => {
+    document.body.classList.add("cursor-out");
+  });
+}
+
 init();
